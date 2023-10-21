@@ -1,0 +1,143 @@
+openapi: '3.0.0'
+info:
+  version: '1.0.0'
+  title: 'Media Service API'
+  description: Supports Media related S3 bucket operations
+
+paths:
+  /health:
+    get:
+      security:
+        - ApiKeyAuth: []
+      summary: Service health check
+      responses:
+          '200':
+            description: Service is healthy
+          '500':
+            description: Service is unhealthy
+  /signed-url:
+    get:
+      security:
+        - ApiKeyAuth: []
+      summary: Request a signed URL for an AWS S3 object
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: '#/components/schemas/SignedUrlRequestBodySingle'
+                - $ref: '#/components/schemas/SignedUrlRequestBodyArray'
+      responses:
+        '200':
+          description: the request was successful overall, individual request might still failed
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/SignedUrlResponseSingle'
+                  - $ref: '#/components/schemas/SignedUrlResponseArray'
+
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Unexpected server-side error while processing the request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+components:
+  schemas:
+    SignedUrlRequestBodySingle:
+      description: Object to request signed S3 URL for one object
+      type: object
+      required:
+        - key
+        - bucket
+        - operation
+      properties:
+        key:
+          description: Key of the referenced object
+          type: string
+        bucket:
+          description: Bucket name
+          type: string
+        operation:
+          description: Type of the operation the requested signed URL usable for
+          type: string
+        expires:
+          description: Validity period of the signed URL in seconds (3600 if not provided)
+          type: number
+
+    SignedUrlRequestBodyArray:
+      description: Array of SignedUrlRequestBody
+      type: array
+      items:
+        $ref: '#/components/schemas/SignedUrlRequestBodySingle'
+
+    SignedUrlResponse:
+      description: Response containing a signed URL
+      type: object
+      properties:
+        key:
+          description: Key of the referenced object
+          type: string
+        bucket:
+          description: Bucket name
+          type: string
+        operation:
+          description: Type of the operation the requested signed URL usable for
+          type: string
+        url:
+          description: Signed URL to the requested resource
+          type: string
+        expires:
+          description: Expiration date of the signed URL
+          type: number
+
+    SignedUrlResponseSingle:
+      description: Response body for SignedUrlRequest in batch mode. The object can contain a SignedUrlResponse, or an ErrorResponse in case of unsuccessful request
+      type: object
+      oneOf:
+        - $ref: '#/components/schemas/SignedUrlResponse'
+        - $ref: '#/components/schemas/Error'
+
+    SignedUrlResponseArray:
+      description: Response containing an array of SignedUrlResponseBatchSingle as response to a batch request
+      type: array
+      items:
+        $ref: '#/components/schemas/SignedUrlResponseSingle'
+
+    Error:
+      description: General purpose error object
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          description: The machine interpretable error code
+          type: string
+        message:
+          description: A human readable error message
+          type: string
+        context:
+          description: Optional error context information
+          type: string
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-Api-Key
+    BearerAuth:
+      type: http
+      scheme: bearer
