@@ -50,7 +50,7 @@ cd aws-s3-signed-url-generator
 ```
 
 ### Deployment on your machine
-13. Install dependencies
+1. Install dependencies
 ```
 npm install
 ```
